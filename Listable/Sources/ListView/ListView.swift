@@ -203,10 +203,6 @@ public final class ListView : UIView
             return false
         }
         
-        guard let lastLoadedIndexPath = self.storage.presentationState.lastIndexPath else {
-            return false
-        }
-        
         // If the item is already visible and that's good enough, return.
         
         let isAlreadyVisible = self.collectionView.indexPathsForVisibleItems.contains(toIndexPath)
@@ -217,23 +213,13 @@ public final class ListView : UIView
         
         // Otherwise, perform scrolling.
         
-        let scroll = {
+        return self.updatePresentationStateAndScroll(toIndexPath: toIndexPath) {
             self.collectionView.scrollToItem(
                 at: toIndexPath,
                 at: position.position.UICollectionViewScrollPosition,
                 animated: animated
             )
         }
-        
-        if lastLoadedIndexPath < toIndexPath {
-            self.updatePresentationState(for: .programaticScrollDownTo(toIndexPath)) { _ in
-                scroll()
-            }
-        } else {
-            scroll()
-        }
-
-        return true
     }
 
     @discardableResult
@@ -245,13 +231,9 @@ public final class ListView : UIView
             return false
         }
 
-        guard let lastLoadedIndexPath = self.storage.presentationState.lastIndexPath else {
-            return false
-        }
-
         // Perform scrolling.
 
-        let scroll = {
+        return self.updatePresentationStateAndScroll(toIndexPath: toIndexPath)  {
             let contentHeight = self.layout.collectionViewContentSize.height
             let contentFrameHeight = self.collectionView.contentFrame.height
 
@@ -264,16 +246,6 @@ public final class ListView : UIView
             let contentOffset = CGPoint(x: self.collectionView.contentOffset.x, y: contentOffsetY)
             self.collectionView.setContentOffset(contentOffset, animated: animated)
         }
-
-        if lastLoadedIndexPath < toIndexPath {
-            self.updatePresentationState(for: .programaticScrollDownTo(toIndexPath)) { _ in
-                scroll()
-            }
-        } else {
-            scroll()
-        }
-
-        return true
     }
     
     //
@@ -637,7 +609,28 @@ public final class ListView : UIView
         
         self.updateCollectionViewSelections(animated: reason.animated)
     }
-        
+
+    private func updatePresentationStateAndScroll(toIndexPath: IndexPath, scroll: @escaping () -> Void) -> Bool {
+
+        // Make sure we have a last loaded index path.
+
+        guard let lastLoadedIndexPath = self.storage.presentationState.lastIndexPath else {
+            return false
+        }
+
+        // Update presentation state if needed, then scroll.
+
+        if lastLoadedIndexPath < toIndexPath {
+            self.updatePresentationState(for: .programaticScrollDownTo(toIndexPath)) { _ in
+                scroll()
+            }
+        } else {
+            scroll()
+        }
+
+        return true
+    }
+
     private func performBatchUpdates(
         with diff : SectionedDiff<Section,AnyItem>,
         animated: Bool,
