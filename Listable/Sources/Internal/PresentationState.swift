@@ -638,7 +638,7 @@ final class PresentationState
                 position: self.itemPosition,
                 reordering: self.reorderingActions
             )
-                        
+
             // Appearance
             
             self.model.appearance.apply(
@@ -654,16 +654,17 @@ final class PresentationState
                 with: applyInfo
             )
             
-            // Apply Swipe To Action Appearance
-            
             if
                 let actions = self.model.swipeActions,
                 let appearance = self.model.swipeActionsAppearance
             {
+                cell.content.prepareForSwipeActions(hasActions: true)
                 appearance.apply(
                     swipeActions: actions,
                     to: cell.content.swipeView
                 )
+            } else {
+                cell.content.prepareForSwipeActions(hasActions: false)
             }
         }
         
