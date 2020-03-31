@@ -14,8 +14,7 @@ extension ItemElementCell
     {
         private(set) var contentView : Element.Appearance.ContentView
 
-        lazy private(set) var swipeView : Element.SwipeActionsAppearance.ContentView
-            = Element.SwipeActionsAppearance.createView(frame: self.frame)
+        private(set) var swipeView : Element.SwipeActionsAppearance.ActionContentView?
 
         private var panGesture: UIPanGestureRecognizer?
 
@@ -37,29 +36,67 @@ extension ItemElementCell
         {
             super.layoutSubviews()
             
-            self.contentView.frame = self.bounds
+            // Update view to the state of the pan gesture
+            if
+                let panGesture = panGesture,
+                panGesture.state == UIGestureRecognizer.State.changed,
+                let swipeView = swipeView
+            {
+                let pointInSelf: CGPoint = panGesture.translation(in: self)
+                var newFrame = self.contentView.bounds
+                newFrame.origin = CGPoint(x: pointInSelf.x, y: 0)
+                self.contentView.frame = newFrame
+                swipeView.frame = self.bounds
+
+            } else {
+                contentView.frame = self.bounds
+            }
+
         }
 
         // MARK: - Swipe
 
-        public func prepareForSwipeActions(hasActions: Bool) {
+        public func prepareForSwipeActions(hasActions: Bool)
+        {
             if hasActions {
                 let panGesture = UIPanGestureRecognizer(
                     target: self,
                     action: #selector(onPan(_:))
                 )
                 panGesture.delegate = self
+                addGestureRecognizer(panGesture)
                 self.panGesture = panGesture
-                self.addGestureRecognizer(panGesture)
+
+                let swipeView = Element.SwipeActionsAppearance.createView(frame: self.frame)
+                self.insertSubview(swipeView, belowSubview: self.contentView)
+                self.swipeView = swipeView
+
             } else if let panGesture = panGesture {
+
                 panGesture.removeTarget(self, action: #selector(onPan(_:)))
                 removeGestureRecognizer(panGesture)
                 self.panGesture = nil
+
+                swipeView?.removeFromSuperview()
+                swipeView = nil
             }
         }
 
-        @objc func onPan(_ pan: UIPanGestureRecognizer) {
-            print("ya boi is pannin'")
+        @objc func onPan(_ pan: UIPanGestureRecognizer)
+        {
+            if pan.state == UIGestureRecognizer.State.began {
+                // no op, we could build the backing view here instead
+            } else if pan.state == UIGestureRecognizer.State.changed {
+                self.setNeedsLayout()
+            } else {
+                // Animate back into place (temporary)
+                UIView.animate(withDuration: 0.1, animations: {
+                    self.setNeedsLayout()
+                    self.layoutIfNeeded()
+                })
+
+                // TODO check for threshold to swipe away and send message to delegate
+            }
         }
     }
 }
