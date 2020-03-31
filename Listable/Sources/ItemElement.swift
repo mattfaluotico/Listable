@@ -54,7 +54,8 @@ public protocol ItemElement
      Do not retain a reference to the passed in views – they are reused by the list.
      */
     func apply(to view : Appearance.ContentView, for reason: ApplyReason, with info : ApplyItemElementInfo)
-    
+
+    func apply(swipe view: SwipeActionsAppearance.ActionContentView, for reason: ApplyReason, with info : ApplyItemElementInfo)
     //
     // MARK: Tracking Changes
     //
@@ -84,6 +85,10 @@ public extension ItemElement
     func wasMoved(comparedTo other : Self) -> Bool
     {
         return self.isEquivalent(to: other) == false
+    }
+
+    func apply(swipe view: SwipeActionsAppearance.ActionContentView, for reason: ApplyReason, with info : ApplyItemElementInfo) {
+        // nothing
     }
 }
 
@@ -161,12 +166,12 @@ public protocol ItemElementSwipeActionsAppearance
     //
     
     /// TODO
-    associatedtype ContentView:UIView
+    associatedtype ActionContentView:UIView
     
     /**
      TODO
      */
-    static func createView(frame : CGRect) -> ContentView
+    static func createView(frame : CGRect) -> ActionContentView
     
     //
     // MARK: Updating View State
@@ -175,7 +180,7 @@ public protocol ItemElementSwipeActionsAppearance
     /**
      TODO
      */
-    func apply(swipeActions : SwipeActions, to view : ContentView)
+    func apply(swipeActions : SwipeActions, to view : ActionContentView)
 }
 
 
@@ -185,7 +190,7 @@ public struct EmptyItemElementSwipeActionsAppearance : ItemElementSwipeActionsAp
     
     // MARK: ItemElementSwipeActionsAppearance
     
-    public typealias ContentView = UIView
+    public typealias ActionContentView = UIView
     
     public static func createView(frame: CGRect) -> UIView {
         return UIView(frame: frame)

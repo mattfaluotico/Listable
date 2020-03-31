@@ -653,16 +653,25 @@ final class PresentationState
                 for: reason,
                 with: applyInfo
             )
-            
+
             if
                 let actions = self.model.swipeActions,
-                let appearance = self.model.swipeActionsAppearance
+                let appearance = self.model.swipeActionsAppearance,
+                let swipeView = cell.content.swipeView
             {
                 cell.content.prepareForSwipeActions(hasActions: true)
+
+                self.model.element.apply(
+                    swipe: swipeView,
+                    for: reason,
+                    with: applyInfo
+                )
+
                 appearance.apply(
                     swipeActions: actions,
-                    to: cell.content.swipeView
+                    to: swipeView
                 )
+
             } else {
                 cell.content.prepareForSwipeActions(hasActions: false)
             }

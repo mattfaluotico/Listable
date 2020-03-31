@@ -104,6 +104,21 @@ struct DemoItem : BlueprintItemElement, Equatable
         
         return box
     }
+
+    func swipeElement(with info: ApplyItemElementInfo) -> Element? {
+        var box = Box(
+            backgroundColor: .red,
+            cornerStyle: .square,
+            wrapping: Inset(
+                uniformInset: 10.0,
+                wrapping: Label(text: "Delete")
+            )
+        )
+
+        box.borderStyle = .solid(color: .white(0.9), width: 2.0)
+
+        return box
+    }
 }
 
 

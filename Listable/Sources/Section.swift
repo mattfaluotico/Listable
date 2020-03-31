@@ -104,7 +104,9 @@ public struct Section
     {
         lhs.add(rhs)
     }
-    
+
+    // MFTODO: This will lose the swipe appearance
+
     public static func += <Element:ItemElement>(lhs : inout Section, rhs : Item<Element>)
     {
         lhs.add(rhs)
