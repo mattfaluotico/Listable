@@ -9,29 +9,32 @@ import Foundation
 
 protocol SwipeControllerDelegate: class {
 
-    func swipeController(panDidMove controller: SwipeController)
-    func swipeController(panDidEnd controller: SwipeController)
+    func swipeControllerPanDidMove()
+    func swipeControllerPanDidEnd()
 
 }
 
-final class SwipeController {
+public enum SwipeControllerState {
+    case pending
+    case swiping(swipeThrough: Bool)
+    case locked
+    case finished
+}
 
-    enum State {
-        case pending
-        case swiping(swipeThrough: Bool)
-        case locked
-        case finished
-    }
+public final class SwipeController<Appearance: ItemElementSwipeActionsAppearance> {
 
-    var state: State = .pending {
+    var state: SwipeControllerState = .pending {
         didSet {
-            self.swipeView?.state = state
+            if let swipeView = self.swipeView {
+                appearance.apply(swipeControllerState: state, to: swipeView)
+            }
         }
     }
 
     var actions: SwipeActions
 
-    weak var swipeView: SwipeView?
+    var appearance: Appearance
+    weak var swipeView: Appearance.ContentView?
     weak var contentView: UIView?
     weak var containerView: UIView?
     weak var delegate: SwipeControllerDelegate?
@@ -41,11 +44,13 @@ final class SwipeController {
     private(set) var gestureRecognizer: UIPanGestureRecognizer
 
     init(
+        appearance: Appearance,
         actions: SwipeActions,
         contentView: UIView,
         containerView: UIView,
-        swipeView: SwipeView)
+        swipeView: Appearance.ContentView)
     {
+        self.appearance = appearance
         self.actions = actions
         self.contentView = contentView
         self.containerView = containerView
@@ -94,7 +99,7 @@ final class SwipeController {
         let originInContainer = calculateNewOrigin()
         state = panningState(originInContainer: originInContainer)
 
-        delegate?.swipeController(panDidMove: self)
+        delegate?.swipeControllerPanDidMove()
     }
 
     private func panEnded(_ pan: UIPanGestureRecognizer)
@@ -102,14 +107,14 @@ final class SwipeController {
         let originInContainer = calculateNewOrigin()
         state = endState(originInContainer: originInContainer)
 
-        delegate?.swipeController(panDidEnd: self)
+        delegate?.swipeControllerPanDidEnd()
 
         if case .finished = state, swipeThroughEnabled {
             self.performSwipeThroughAction()
         }
     }
 
-    private func panningState(originInContainer: CGPoint) -> State
+    private func panningState(originInContainer: CGPoint) -> SwipeControllerState
     {
         if originInContainer.x > 0 {
             return .pending
@@ -121,11 +126,11 @@ final class SwipeController {
         }
     }
 
-    private func endState(originInContainer: CGPoint) -> State
+    private func endState(originInContainer: CGPoint) -> SwipeControllerState
     {
         guard let swipeView = swipeView else { fatalError() }
 
-        let holdXPosition = -swipeView.preferredSize().width
+        let holdXPosition = -appearance.preferredSize(for: swipeView).width
 
         if originInContainer.x < swipeThroughOriginX && swipeThroughEnabled  {
             return .finished
@@ -142,7 +147,7 @@ final class SwipeController {
     @objc func collectionViewPan()
     {
         self.state = .pending
-        self.delegate?.swipeController(panDidEnd: self)
+        self.delegate?.swipeControllerPanDidEnd()
         self.collectionView?.panGestureRecognizer.removeTarget(self, action: nil)
         self.collectionView = nil
     }
@@ -193,16 +198,36 @@ final class SwipeController {
     }
 }
 
-extension SwipeController {
+public final class DefaultItemElementSwipeActionsAppearance: ItemElementSwipeActionsAppearance {
 
-    class SwipeView: UIView {
+    public init() { }
+
+    public static func createView(frame: CGRect) -> SwipeView {
+        return .init()
+    }
+
+    public func apply(swipeActions: SwipeActions, to view: SwipeView) {
+        if let action = swipeActions.actions.first {
+            view.action = action
+        }
+    }
+
+    public func apply(swipeControllerState: SwipeControllerState, to view: DefaultItemElementSwipeActionsAppearance.SwipeView) {
+        view.state = swipeControllerState
+    }
+
+    public func preferredSize(for view: SwipeView) -> CGSize {
+        return view.preferredSize()
+    }
+
+    public final class SwipeView: UIView {
 
         private static var padding: UIEdgeInsets
         {
             return UIEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
         }
 
-        var state: SwipeController.State
+        var state: SwipeControllerState
         {
             didSet {
                 UIView.animate(withDuration: 0.2) {
@@ -216,16 +241,30 @@ extension SwipeController {
             }
         }
 
-        private var action: SwipeAction
+        var action: SwipeAction? {
+            didSet {
+                self.titleView?.text = action?.title
+                self.backgroundColor = action?.backgroundColor ?? .white
+
+                if let image = action?.image {
+                    if let imageView = self.imageView {
+                        imageView.image = image
+                    } else {
+                        let imageView = UIImageView(image: image)
+                        self.stackView.addArrangedSubview(imageView)
+                        self.imageView = imageView
+                    }
+                }
+            }
+        }
 
         private var imageView: UIImageView?
         private var titleView: UILabel?
         private var gestureRecognizer: UITapGestureRecognizer
         private var stackView = UIStackView()
 
-        init(action: SwipeAction)
+        init()
         {
-            self.action = action
             self.state = .pending
             self.gestureRecognizer = UITapGestureRecognizer()
             super.init(frame: .zero)
@@ -233,22 +272,11 @@ extension SwipeController {
             self.gestureRecognizer.addTarget(self, action: #selector(onTap))
             self.addGestureRecognizer(gestureRecognizer)
 
-            self.backgroundColor = action.backgroundColor ?? .red
-
-            if let title = action.title {
-                let titleView = UILabel()
-                titleView.text = title
-                titleView.textColor = .white
-                titleView.lineBreakMode = .byClipping
-                self.stackView.addArrangedSubview(titleView)
-                self.titleView = titleView
-            }
-
-            if let image = action.image {
-                let imageView = UIImageView(image: image)
-                self.stackView.addArrangedSubview(imageView)
-                self.imageView = imageView
-            }
+            let titleView = UILabel()
+            titleView.textColor = .white
+            titleView.lineBreakMode = .byClipping
+            self.stackView.addArrangedSubview(titleView)
+            self.titleView = titleView
 
             stackView.spacing = 2
             stackView.alignment = .center
@@ -265,7 +293,7 @@ extension SwipeController {
             fatalError("init(coder:) has not been implemented")
         }
 
-        override func layoutSubviews()
+        public override func layoutSubviews()
         {
             super.layoutSubviews()
             self.stackView.frame = self.bounds
@@ -284,8 +312,9 @@ extension SwipeController {
 
         @objc func onTap()
         {
-            let _ = self.action.onTap(action)
+            if let action = self.action {
+                let _ = action.onTap(action)
+            }
         }
     }
-
 }

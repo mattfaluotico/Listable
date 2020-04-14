@@ -14,8 +14,8 @@ extension ItemElementCell
     {
         private(set) var contentView : Element.Appearance.ContentView
 
-        private var swipeController: SwipeController?
-        private var swipeView : SwipeController.SwipeView?
+        private var swipeController: SwipeController<Element.SwipeActionsAppearance>?
+        private var swipeView : Element.SwipeActionsAppearance.ContentView?
 
         override init(frame : CGRect)
         {
@@ -43,7 +43,7 @@ extension ItemElementCell
         }
 
         /// Set frames when swipe controller is active
-        private func setFrames(swipeController: SwipeController, swipeView: SwipeController.SwipeView)
+        private func setFrames(swipeController: SwipeController<Element.SwipeActionsAppearance>, swipeView: Element.SwipeActionsAppearance.ContentView)
         {
             let newOrigin_x: CGFloat
 
@@ -52,7 +52,8 @@ extension ItemElementCell
                 newOrigin_x = 0
 
             case .locked:
-                let lowerThreshold = swipeView.preferredSize().width
+                // MFTODO flip
+                let lowerThreshold = swipeController.appearance.preferredSize(for: swipeView).width
                 newOrigin_x = -lowerThreshold
 
             case .finished:
@@ -90,13 +91,14 @@ extension ItemElementCell
             swipeView = nil
         }
 
-        public func registerSwipeActionsIfNeeded(actions: SwipeActions)
+        public func registerSwipeActionsIfNeeded(actions: SwipeActions, appearance: Element.SwipeActionsAppearance)
         {
             guard self.swipeController == nil else { return } // Already Registered
 
-            let swipeView = SwipeController.SwipeView(action: actions.actions.first!)
+            let swipeView = Element.SwipeActionsAppearance.createView(frame: .zero)
 
-            let swipeController = SwipeController(
+            let swipeController = SwipeController<Element.SwipeActionsAppearance>(
+                appearance: appearance,
                 actions: actions,
                 contentView: self.contentView,
                 containerView: self,
@@ -117,13 +119,13 @@ extension ItemElementCell
 
         // MARK: - Swipe Controller Delegate
 
-        func swipeController(panDidMove controller: SwipeController)
+        func swipeControllerPanDidMove()
         {
             self.setNeedsLayout()
             self.layoutIfNeeded()
         }
 
-        func swipeController(panDidEnd controller: SwipeController)
+        func swipeControllerPanDidEnd()
         {
             UIView.animate(withDuration: 0.2) {
                 self.setNeedsLayout()

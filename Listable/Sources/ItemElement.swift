@@ -185,6 +185,10 @@ public protocol ItemElementSwipeActionsAppearance
      Eg, this is where you would set fonts, spacing, colors, etc, to apply your app's theme.
      */
     func apply(swipeActions : SwipeActions, to view : ContentView)
+
+    func apply(swipeControllerState: SwipeControllerState, to view : ContentView)
+
+    func preferredSize(for view: ContentView) -> CGSize
 }
 
 
@@ -202,6 +206,14 @@ public struct EmptyItemElementSwipeActionsAppearance : ItemElementSwipeActionsAp
     
     public func apply(swipeActions: SwipeActions, to view: UIView) {
         // Nothing.
+    }
+
+    public func apply(swipeControllerState: SwipeControllerState, to view: UIView) {
+        // no op
+    }
+
+    public func preferredSize(for view: UIView) -> CGSize {
+        return .zero
     }
 }
 
