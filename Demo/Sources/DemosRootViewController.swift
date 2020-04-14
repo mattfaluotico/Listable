@@ -136,7 +136,7 @@ public final class DemosRootViewController : UIViewController
                             return true
                         }
                     ),performsFirstOnFullSwipe: false),
-//                    swipeActionsAppearance: DefaultItemElementSwipeActionsAppearance(),
+                    swipeActionsAppearance: DefaultItemElementSwipeActionsAppearance(),
                     onSelect : { _ in
                         self.push(DemoTableViewController())
                 })
